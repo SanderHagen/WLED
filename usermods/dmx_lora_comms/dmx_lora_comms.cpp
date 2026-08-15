@@ -12,6 +12,7 @@ class DmxLoRaComms : public Usermod {
     private:
         int dmxChannel = 0;
         int currentPreset = -1;
+        bool shouldDoLoraSetup = true;
 
         // Non-blocking receive accumulator — avoids blocking readStringUntil() in loop()
         static constexpr size_t RX_BUF_SIZE = 512;
@@ -63,7 +64,10 @@ class DmxLoRaComms : public Usermod {
         }
         LORA_SERIAL.begin(9600, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
         LORA_SERIAL.setRxBufferSize(1024);
-        setLoRaConfig();
+
+        if (shouldDoLoraSetup) {
+            setLoRaConfig();
+        }
         
         Serial.println("=== LR02 RECEIVER READY ===");
     }
@@ -113,12 +117,14 @@ class DmxLoRaComms : public Usermod {
     void addToConfig(JsonObject& root) override {
         JsonObject top = root.createNestedObject("DMX LoRaComms");
         top["dmxChannel"] = dmxChannel;
+        top["shouldDoLoraSetup"] = shouldDoLoraSetup;
     }
 
     bool readFromConfig(JsonObject& root) override {
         JsonObject top = root["DMX LoRaComms"];
         bool ok = !top.isNull();
         ok &= getJsonValue(top["dmxChannel"], dmxChannel, 0 /*default*/);
+        ok &= getJsonValue(top["shouldDoLoraSetup"], shouldDoLoraSetup, true /*default*/);
         return ok;  // return false to have WLED write defaults to disk
     }
 };
