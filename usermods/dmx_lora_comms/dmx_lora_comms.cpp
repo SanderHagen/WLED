@@ -13,6 +13,7 @@ class DmxLoRaComms : public Usermod {
         int dmxChannel = 0;
         int currentPreset = -1;
         bool shouldDoLoraSetup = true;
+        uint32_t lastHash = 0;
 
         // Non-blocking receive accumulator — avoids blocking readStringUntil() in loop()
         static constexpr size_t RX_BUF_SIZE = 512;
@@ -62,8 +63,9 @@ class DmxLoRaComms : public Usermod {
         if (!PinManager::allocatePin(LORA_TX_PIN, true, PinOwner::UM_Unspecified)) {
             Serial.println("WARNING: LORA_TX_PIN (17) allocation failed! Check WLED UI pin configs.");
         }
-        LORA_SERIAL.begin(9600, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
+
         LORA_SERIAL.setRxBufferSize(1024);
+        LORA_SERIAL.begin(9600, SERIAL_8N1, LORA_RX_PIN, LORA_TX_PIN);
 
         if (shouldDoLoraSetup) {
             setLoRaConfig();
@@ -95,6 +97,10 @@ class DmxLoRaComms : public Usermod {
 
                 // Serial.println("Received LoRa message: " + incoming);
                 JsonObject obj = doc.as<JsonObject>();
+                uint32_t hash = obj["hash"] | 0;
+                if (hash != 0 && hash == lastHash) continue;
+                lastHash = hash;
+
                 String channelKey = String(dmxChannel);
                 // Serial.println("Looking for key: " + channelKey);
                 if (obj.containsKey(channelKey)) {
